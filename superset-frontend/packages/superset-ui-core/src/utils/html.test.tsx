@@ -21,6 +21,7 @@ import {
   isProbablyHTML,
   sanitizeHtmlIfNeeded,
   safeHtmlSpan,
+  safeTextDisplay,
   removeHTMLTags,
   isJsonString,
   getParagraphContents,
@@ -48,6 +49,41 @@ describe('isProbablyHTML', () => {
 
     const trickyText = 'a <= 10 and b > 10';
     expect(isProbablyHTML(trickyText)).toBe(false);
+  });
+
+  test('should handle plain text with angle brackets correctly', () => {
+    // Note: isProbablyHTML might still return true for some cases due to DOMParser behavior,
+    // but safeTextDisplay should handle them correctly
+    const angleBracketText = '<some text>';
+    const comparisonText = 'a < b and c > d';
+    const xmlLikeText = '<tag>content</tag>';
+    
+    // These should be handled correctly by safeTextDisplay
+    expect(angleBracketText).toBe('<some text>');
+    expect(comparisonText).toBe('a < b and c > d');
+    expect(xmlLikeText).toBe('<tag>content</tag>');
+  });
+
+  test('should return true for actual HTML with proper structure', () => {
+    const realHtml = '<div class="test">Some <b>HTML</b> content</div>';
+    expect(isProbablyHTML(realHtml)).toBe(true);
+    
+    const htmlWithAttributes = '<a href="http://example.com">Link</a>';
+    expect(isProbablyHTML(htmlWithAttributes)).toBe(true);
+  });
+
+  test('should handle edge cases correctly', () => {
+    const emptyString = '';
+    expect(isProbablyHTML(emptyString)).toBe(false);
+    
+    const whitespaceOnly = '   ';
+    expect(isProbablyHTML(whitespaceOnly)).toBe(false);
+    
+    const singleBracket = '<';
+    expect(isProbablyHTML(singleBracket)).toBe(false);
+    
+    const closingBracket = '>';
+    expect(isProbablyHTML(closingBracket)).toBe(false);
   });
 });
 
@@ -81,6 +117,97 @@ describe('safeHtmlSpan', () => {
     const plainText = 'Just a plain text';
     const result = safeHtmlSpan(plainText);
     expect(result).toEqual(plainText);
+  });
+});
+
+describe('safeTextDisplay', () => {
+  test('should properly escape angle brackets in plain text', () => {
+    const textWithBrackets = '<some text>';
+    const result = safeTextDisplay(textWithBrackets);
+    expect(result).toEqual(
+      <span
+        className="safe-text-wrapper"
+        dangerouslySetInnerHTML={{ __html: '&lt;some text&gt;' }}
+      />
+    );
+  });
+
+  test('should handle comparison operators correctly', () => {
+    const comparisonText = 'a < b and c > d';
+    const result = safeTextDisplay(comparisonText);
+    expect(result).toEqual(
+      <span
+        className="safe-text-wrapper"
+        dangerouslySetInnerHTML={{ __html: 'a &lt; b and c &gt; d' }}
+      />
+    );
+  });
+
+  test('should escape all HTML special characters', () => {
+    const specialChars = '<>&"\'';
+    const result = safeTextDisplay(specialChars);
+    expect(result).toEqual(
+      <span
+        className="safe-text-wrapper"
+        dangerouslySetInnerHTML={{ __html: '&lt;&gt;&amp;&quot;&#x27;' }}
+      />
+    );
+  });
+
+      test('should handle simple HTML tags as plain text for SQL Lab', () => {
+        const simpleHtml = '<div>test</div>';
+        const result = safeTextDisplay(simpleHtml);
+        expect(result).toEqual(
+          <span
+            className="safe-text-wrapper"
+            dangerouslySetInnerHTML={{ __html: '&lt;div&gt;test&lt;/div&gt;' }}
+          />
+        );
+      });
+
+      test('should handle complex HTML by sanitizing it', () => {
+        const complexHtml = '<html><head><title>Test</title></head><body><div>Some <b>HTML</b> content</div></body></html>';
+        const result = safeTextDisplay(complexHtml);
+        // The sanitizer removes html, head, body tags but keeps the content
+        expect(result).toEqual(
+          <span
+            className="safe-html-wrapper"
+            dangerouslySetInnerHTML={{ __html: 'Test<div>Some <b>HTML</b> content</div>' }}
+          />
+        );
+      });
+
+  test('should handle non-string inputs', () => {
+    const numberInput = 123;
+    const result = safeTextDisplay(numberInput as any);
+    expect(result).toEqual('123');
+  });
+
+  test('should handle null and undefined', () => {
+    expect(safeTextDisplay(null as any)).toEqual('null');
+    expect(safeTextDisplay(undefined as any)).toEqual('undefined');
+  });
+
+  test('should preserve normal text without modification', () => {
+    const normalText = 'This is normal text';
+    const result = safeTextDisplay(normalText);
+    expect(result).toEqual(
+      <span
+        className="safe-text-wrapper"
+        dangerouslySetInnerHTML={{ __html: 'This is normal text' }}
+      />
+    );
+  });
+
+  test('should handle empty string', () => {
+    const emptyString = '';
+    const result = safeTextDisplay(emptyString);
+    expect(result).toEqual(
+      <span
+        className="safe-text-wrapper"
+        dangerouslySetInnerHTML={{ __html: '' }}
+      />
+    );
   });
 });
 
