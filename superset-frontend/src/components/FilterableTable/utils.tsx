@@ -17,7 +17,7 @@
  * under the License.
  */
 import { JsonModal, safeJsonObjectParse } from 'src/components/JsonModal';
-import { t, safeHtmlSpan } from '@superset-ui/core';
+import { t, safeHtmlSpan, safeTextDisplay } from '@superset-ui/core';
 import { NULL_STRING, CellDataType } from './useCellContentParser';
 
 type CellParams = {
@@ -52,7 +52,8 @@ export const renderResultCell = ({
     );
   }
   if (allowHTML && typeof cellData === 'string') {
-    return safeHtmlSpan(cellNode);
+    // Use the new safeTextDisplay function for better handling of angle brackets
+    return safeTextDisplay(cellNode);
   }
   return cellNode;
 };
