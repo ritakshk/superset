@@ -372,7 +372,12 @@ const config: ControlPanelConfig = {
               description: t(
                 'If enabled, this control sorts the results/values descending, otherwise it sorts the results ascending.',
               ),
-              visibility: isAggMode,
+              visibility: ({ controls }: ControlPanelsContainerProps) => {
+                const hasSortMetric = Boolean(
+                  controls?.timeseries_limit_metric?.value,
+                );
+                return hasSortMetric && isAggMode({ controls });
+              },
               resetOnHide: false,
             },
           },
