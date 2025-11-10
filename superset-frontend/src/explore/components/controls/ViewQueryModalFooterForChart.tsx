@@ -17,34 +17,28 @@
  * under the License.
  */
 import { FC } from 'react';
-import { isObject } from 'lodash';
 import { t, SupersetClient } from '@superset-ui/core';
 import Button from 'src/components/Button';
 import { useHistory } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { userHasPermission } from 'src/dashboard/util/permissionUtils';
 import { UserWithPermissionsAndRoles } from 'src/types/bootstrapTypes';
+import { QueryFormData } from '@superset-ui/core';
+import { safeStringify } from 'src/utils/safeStringify';
 
-interface SimpleDataSource {
-  id: string;
+interface ViewQueryModalFooterForChartProps {
+  closeModal?: () => void;
+  formData: QueryFormData;
   sql: string;
-  type: string;
-}
-
-interface ViewQueryModalFooterProps {
-  closeModal?: Function;
-  changeDatasource?: Function;
-  datasource?: SimpleDataSource;
 }
 
 const CLOSE = t('Close');
-const SAVE_AS_DATASET = t('Save as Dataset');
 const OPEN_IN_SQL_LAB = t('Open in SQL Lab');
 
-const ViewQueryModalFooter: FC<ViewQueryModalFooterProps> = (props: {
-  closeModal: () => void;
-  changeDatasource: () => void;
-  datasource: SimpleDataSource;
+const ViewQueryModalFooterForChart: FC<ViewQueryModalFooterForChartProps> = ({
+  closeModal,
+  formData,
+  sql,
 }) => {
   const history = useHistory();
   const user = useSelector<any, UserWithPermissionsAndRoles | undefined>(
@@ -52,18 +46,20 @@ const ViewQueryModalFooter: FC<ViewQueryModalFooterProps> = (props: {
   );
   const canAccessSqlLab = userHasPermission(user, 'SQL Lab', 'menu_access');
 
-  const viewInSQLLab = (
-    openInNewWindow: boolean,
-    id: string,
-    type: string,
-    sql: string,
-  ) => {
+  const openInSQLLab = (openInNewWindow: boolean) => {
+    if (!formData.datasource || !sql) {
+      return;
+    }
+
     const payload = {
-      datasourceKey: `${id}__${type}`,
+      datasourceKey: formData.datasource,
       sql,
     };
+
     if (openInNewWindow) {
-      SupersetClient.postForm('/sqllab/', payload);
+      SupersetClient.postForm('/sqllab/', {
+        form_data: safeStringify(payload),
+      });
     } else {
       history.push({
         pathname: '/sqllab',
@@ -72,34 +68,23 @@ const ViewQueryModalFooter: FC<ViewQueryModalFooterProps> = (props: {
         },
       });
     }
+    closeModal?.();
   };
 
-  const openSQL = (openInNewWindow: boolean) => {
-    const { datasource } = props;
-    if (isObject(datasource)) {
-      const { id, type, sql } = datasource;
-      viewInSQLLab(openInNewWindow, id, type, sql);
-    }
-  };
+  // Only show SQL Lab button if user has permission AND SQL is loaded
+  const showSqlLabButton = canAccessSqlLab && sql;
+
   return (
     <div>
-      <Button
-        onClick={() => {
-          props?.closeModal?.();
-          props?.changeDatasource?.();
-        }}
-      >
-        {SAVE_AS_DATASET}
-      </Button>
-      {canAccessSqlLab && (
-        <Button onClick={({ metaKey }) => openSQL(Boolean(metaKey))}>
+      {showSqlLabButton && (
+        <Button onClick={({ metaKey }) => openInSQLLab(Boolean(metaKey))}>
           {OPEN_IN_SQL_LAB}
         </Button>
       )}
       <Button
         buttonStyle="primary"
         onClick={() => {
-          props?.closeModal?.();
+          closeModal?.();
         }}
       >
         {CLOSE}
@@ -108,4 +93,5 @@ const ViewQueryModalFooter: FC<ViewQueryModalFooterProps> = (props: {
   );
 };
 
-export default ViewQueryModalFooter;
+export default ViewQueryModalFooterForChart;
+

@@ -49,6 +49,7 @@ import { Tooltip } from 'src/components/Tooltip';
 import Icons from 'src/components/Icons';
 import ModalTrigger from 'src/components/ModalTrigger';
 import ViewQueryModal from 'src/explore/components/controls/ViewQueryModal';
+import ViewQueryModalFooterForChart from 'src/explore/components/controls/ViewQueryModalFooterForChart';
 import { ResultsPaneOnDashboard } from 'src/explore/components/DataTablesPane';
 import { DrillDetailMenuItems } from 'src/components/Chart/DrillDetail';
 import { LOG_ACTIONS_CHART_DOWNLOAD_AS_IMAGE } from 'src/logger/LogUtils';
@@ -172,6 +173,7 @@ const SliceHeaderControls = (
   const [modalFilters, setFilters] = useState<BinaryQueryObjectFilterClause[]>(
     [],
   );
+  const [querySql, setQuerySql] = useState<string>('');
 
   const canEditCrossFilters =
     useSelector<RootState, boolean>(
@@ -392,11 +394,27 @@ const SliceHeaderControls = (
               <div data-test="view-query-menu-item">{t('View query')}</div>
             }
             modalTitle={t('View query')}
-            modalBody={<ViewQueryModal latestQueryFormData={props.formData} />}
+            modalBody={
+              <ViewQueryModal
+                latestQueryFormData={props.formData}
+                onSqlReady={(sql: string) => setQuerySql(sql)}
+              />
+            }
+            modalFooter={
+              <ViewQueryModalFooterForChart
+                formData={props.formData}
+                sql={querySql}
+                closeModal={() => {
+                  queryMenuRef.current?.close();
+                  setQuerySql('');
+                }}
+              />
+            }
             draggable
             resizable
             responsive
             ref={queryMenuRef}
+            onExit={() => setQuerySql('')}
           />
         </Menu.Item>
       )}

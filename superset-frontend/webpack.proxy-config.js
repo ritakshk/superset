@@ -17,7 +17,15 @@
  * under the License.
  */
 const zlib = require('zlib');
-const { ZSTDDecompress } = require('simple-zstd');
+// Lazy load zstd only if needed (for zstd-encoded responses)
+let ZSTDDecompress;
+try {
+  ZSTDDecompress = require('simple-zstd').ZSTDDecompress;
+} catch (error) {
+  // zstd is optional - only needed if backend sends zstd-encoded responses
+  // eslint-disable-next-line no-console
+  console.warn('zstd not available, zstd-encoded responses will not be supported');
+}
 
 const yargs = require('yargs');
 // eslint-disable-next-line import/no-extraneous-dependencies
@@ -129,7 +137,14 @@ function processHTML(proxyResponse, response) {
   } else if (responseEncoding === 'deflate') {
     uncompress = zlib.createInflate();
   } else if (responseEncoding === 'zstd') {
-    uncompress = ZSTDDecompress();
+    if (ZSTDDecompress) {
+      uncompress = ZSTDDecompress();
+    } else {
+      // If zstd is not available, we can't decompress zstd-encoded responses
+      // This should be rare in development
+      response.end('zstd decompression not available');
+      return;
+    }
   }
   if (uncompress) {
     originalResponse.pipe(uncompress);
