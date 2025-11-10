@@ -116,6 +116,7 @@ export interface ExplorePageState {
     form_data: QueryFormData;
     hiddenFormData?: Partial<QueryFormData>;
     slice: Slice;
+    sliceName: string | null;
     controlsTransferred: string[];
     standalone: boolean;
     force: boolean;

@@ -30,6 +30,7 @@ import ViewQuery from 'src/explore/components/controls/ViewQuery';
 
 interface Props {
   latestQueryFormData: object;
+  onSqlReady?: (sql: string) => void;
 }
 
 type Result = {
@@ -56,9 +57,14 @@ const ViewQueryModal: FC<Props> = props => {
       resultType,
     })
       .then(({ json }) => {
-        setResult(ensureIsArray(json.result));
+        const results = ensureIsArray(json.result);
+        setResult(results);
         setIsLoading(false);
         setError(null);
+        // Notify parent when SQL is ready
+        if (props.onSqlReady && results.length > 0 && results[0].query) {
+          props.onSqlReady(results[0].query);
+        }
       })
       .catch(response => {
         getClientErrorObject(response).then(({ error, message }) => {

@@ -16,7 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   css,
@@ -46,8 +46,10 @@ import {
   LOG_ACTIONS_CHART_DOWNLOAD_AS_XLS,
 } from 'src/logger/LogUtils';
 import ViewQueryModal from '../controls/ViewQueryModal';
+import ViewQueryModalFooterForChart from '../controls/ViewQueryModalFooterForChart';
 import EmbedCodeContent from '../EmbedCodeContent';
 import DashboardsSubMenu from './DashboardsSubMenu';
+import { userHasPermission } from 'src/dashboard/util/permissionUtils';
 
 const MENU_KEYS = {
   EDIT_PROPERTIES: 'edit_properties',
@@ -125,11 +127,19 @@ export const useExploreAdditionalActionsMenu = (
   const dispatch = useDispatch();
   const [showReportSubMenu, setShowReportSubMenu] = useState(null);
   const [isDropdownVisible, setIsDropdownVisible] = useState(false);
+  const [querySql, setQuerySql] = useState('');
+  const queryMenuRef = useRef(null);
   const chart = useSelector(
     state => state.charts?.[getChartKey(state.explore)],
   );
+  const user = useSelector(state => state.user);
 
   const { datasource } = latestQueryFormData;
+  // Only show SQL Lab menu item if user has explicit permission
+  // Admins always have access, but we still check for the specific permission
+  const canAccessSqlLab = user
+    ? userHasPermission(user, 'SQL Lab', 'menu_access')
+    : false;
 
   const shareByEmail = useCallback(async () => {
     try {
@@ -425,14 +435,29 @@ export const useExploreAdditionalActionsMenu = (
             }
             modalTitle={t('View query')}
             modalBody={
-              <ViewQueryModal latestQueryFormData={latestQueryFormData} />
+              <ViewQueryModal
+                latestQueryFormData={latestQueryFormData}
+                onSqlReady={sql => setQuerySql(sql)}
+              />
+            }
+            modalFooter={
+              <ViewQueryModalFooterForChart
+                formData={latestQueryFormData}
+                sql={querySql}
+                closeModal={() => {
+                  queryMenuRef.current?.close();
+                  setQuerySql('');
+                }}
+              />
             }
             draggable
             resizable
             responsive
+            ref={queryMenuRef}
+            onExit={() => setQuerySql('')}
           />
         </Menu.Item>
-        {datasource && (
+        {datasource && canAccessSqlLab && (
           <Menu.Item key={MENU_KEYS.RUN_IN_SQL_LAB}>
             {t('Run in SQL Lab')}
           </Menu.Item>
@@ -441,9 +466,11 @@ export const useExploreAdditionalActionsMenu = (
     ),
     [
       addDangerToast,
+      canAccessSqlLab,
       canDownloadCSV,
       chart,
       dashboards,
+      datasource,
       handleMenuClick,
       isDropdownVisible,
       latestQueryFormData,

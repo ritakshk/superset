@@ -299,3 +299,113 @@ test('does omit hiddenFormData when query_mode is not enabled', async () => {
     expect(formData[key]).toBeUndefined();
   });
 });
+
+describe('Browser tab title updates', () => {
+  const originalTitle = 'Superset';
+
+  beforeEach(() => {
+    document.title = originalTitle;
+  });
+
+  afterEach(() => {
+    document.title = originalTitle;
+  });
+
+  test('updates browser tab title when chart has a name', async () => {
+    const chartName = 'Top Timezones';
+    const stateWithChart = {
+      ...reduxState,
+      explore: {
+        ...reduxState.explore,
+        slice: {
+          slice_id: 1,
+          slice_name: chartName,
+        },
+        sliceName: chartName,
+      },
+    };
+
+    renderWithRouter({ initialState: stateWithChart });
+    await waitFor(() => {
+      expect(document.title).toBe(chartName);
+    });
+  });
+
+  test('keeps default title when chart has no name', async () => {
+    const stateWithNoChart = {
+      ...reduxState,
+      explore: {
+        ...reduxState.explore,
+        slice: null,
+        sliceName: null,
+      },
+    };
+
+    renderWithRouter({ initialState: stateWithNoChart });
+    await waitFor(() => {
+      expect(document.title).toBe(originalTitle);
+    });
+  });
+
+  test('updates title when sliceName changes', async () => {
+    const firstChartName = 'Chart One';
+    const firstState = {
+      ...reduxState,
+      explore: {
+        ...reduxState.explore,
+        slice: { slice_id: 1, slice_name: firstChartName },
+        sliceName: firstChartName,
+      },
+    };
+
+    const { rerender } = renderWithRouter({ initialState: firstState });
+    await waitFor(() => {
+      expect(document.title).toBe(firstChartName);
+    });
+
+    const secondChartName = 'Chart Two';
+    const secondState = {
+      ...reduxState,
+      explore: {
+        ...reduxState.explore,
+        slice: { slice_id: 2, slice_name: secondChartName },
+        sliceName: secondChartName,
+      },
+    };
+
+    rerender(
+      <MemoryRouter initialEntries={['/explore/']}>
+        <Route path="/explore/">
+          <ExploreViewContainer />
+        </Route>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(document.title).toBe(secondChartName);
+    });
+  });
+
+  test('resets title to default when component unmounts', async () => {
+    const chartName = 'Test Chart';
+    const stateWithChart = {
+      ...reduxState,
+      explore: {
+        ...reduxState.explore,
+        slice: {
+          slice_id: 1,
+          slice_name: chartName,
+        },
+        sliceName: chartName,
+      },
+    };
+
+    const { unmount } = renderWithRouter({ initialState: stateWithChart });
+    await waitFor(() => {
+      expect(document.title).toBe(chartName);
+    });
+
+    unmount();
+    expect(document.title).toBe(originalTitle);
+  });
+});
