@@ -82,12 +82,16 @@ function PropertiesModal({
   const [tags, setTags] = useState<TagType[]>([]);
 
   const tagsAsSelectValues = useMemo(() => {
-    const selectTags = tags.map((tag: { id: number; name: string }) => ({
-      value: tag.id,
-      label: tag.name,
-    }));
+    const selectTags = [...tags]
+      .sort((a, b) =>
+        a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }),
+      )
+      .map((tag: { id: number; name: string }) => ({
+        value: tag.id,
+        label: tag.name,
+      }));
     return selectTags;
-  }, [tags.length]);
+  }, [tags]);
 
   function showError({ error, statusText, message }: any) {
     let errorText = error || statusText || t('An error has occurred');
