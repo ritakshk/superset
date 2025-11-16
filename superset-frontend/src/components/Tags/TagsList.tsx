@@ -68,11 +68,20 @@ const TagsList = ({
     [tagsIsLong, tags.length, tempMaxTags],
   );
 
+  // Sort tags alphabetically (case-insensitive)
+  const sortedTags = useMemo(
+    () =>
+      [...tags].sort((a, b) =>
+        a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }),
+      ),
+    [tags],
+  );
+
   return (
     <TagsDiv className="tag-list">
       {tagsIsLong && typeof tempMaxTags === 'number' ? (
         <>
-          {tags.slice(0, tempMaxTags - 1).map((tag: TagType, index) => (
+          {sortedTags.slice(0, tempMaxTags - 1).map((tag: TagType, index) => (
             <Tag
               id={tag.id}
               key={tag.id}
@@ -82,17 +91,17 @@ const TagsList = ({
               editable={editable}
             />
           ))}
-          {tags.length > tempMaxTags ? (
+          {sortedTags.length > tempMaxTags ? (
             <Tag
               name={`+${extraTags}...`}
               onClick={expand}
-              toolTipTitle={tags.map(t => t.name).join(', ')}
+              toolTipTitle={sortedTags.map(t => t.name).join(', ')}
             />
           ) : null}
         </>
       ) : (
         <>
-          {tags.map((tag: TagType, index) => (
+          {sortedTags.map((tag: TagType, index) => (
             <Tag
               id={tag.id}
               key={tag.id}
@@ -103,7 +112,7 @@ const TagsList = ({
             />
           ))}
           {maxTags ? (
-            tags.length > maxTags ? (
+            sortedTags.length > maxTags ? (
               <Tag name="..." onClick={collapse} />
             ) : null
           ) : null}
